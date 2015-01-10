@@ -25,7 +25,7 @@ public class WorldChunk : WorldGenPrismData {
 	}
 
 	private void Start() {
-		prisms = WorldGen.mainWorldGen ().MakePrisms (hexPosition, prismContainer.transform);
+		prisms = WorldGen.mainWorldGen ().MakePrisms (hexPosition, ref prismContainer);
 	}
 
 	private void OnDestroy() {
@@ -44,5 +44,9 @@ public class WorldChunk : WorldGenPrismData {
 
 	public void UnloadChunk() {
 		// TODO
+	}
+
+	public float heightAt(HexPosition position) {
+		return prisms[position.x - hexPosition.x, position.v - hexPosition.v].transform.localPosition.y;
 	}
 }
