@@ -17,7 +17,7 @@ public class SingletonContainer : MonoBehaviour {
 		}
 	}
 
-	void Awake () {
+	private void Awake () {
 		if (_sharedContainer == null) {
 			_sharedContainer = this;
 			DontDestroyOnLoad(gameObject);
@@ -26,8 +26,15 @@ public class SingletonContainer : MonoBehaviour {
 		}
 	}
 
-	void Start() {
+	private void Start() {
+		// Setting up self
 		transform.parent = null;
 		gameObject.name = "Singletons";
+		// Load Console
+		if (ConsoleContainer.instance) {
+			ConsoleLog.Instance.Log("Console Loaded");
+		} else {
+			Debug.Log("Console not loaded.");
+		};
 	}
 }
