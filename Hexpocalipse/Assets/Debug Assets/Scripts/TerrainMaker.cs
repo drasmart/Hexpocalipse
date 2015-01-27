@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class TerrainMaker : MonoBehaviour {
@@ -28,13 +28,15 @@ public class TerrainMaker : MonoBehaviour {
 		}
 		_activePrisms = new GameObject ();
 		_activePrisms.transform.parent = transform;
+		_activePrisms.transform.localScale = Vector3.one;
 		float sq15 = Mathf.Sqrt(3)/2;
 		for (int i = 0; i < size; i++) {
 			for (int j = 0; j < size; j++) {
 				World.HexData data = generator[new World.HexCoords(i, j)];
 				GameObject prism = Instantiate(prefab) as GameObject;
 				prism.transform.parent = _activePrisms.transform;
-				prism.transform.position = new Vector3(sq15 * i, data.height, (float)j * sq15 - (float)i / 2);
+				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15, data.height, (float)j * 0.75f);
+				prism.transform.localScale = prefab.transform.localScale;
 			}
 		}
 		return "Generation Finished.";

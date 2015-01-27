@@ -17,7 +17,7 @@ namespace World {
 
 		// Lifecycle
 
-		public GridGen(float delta0, float lambda, int fractalDepth = 8) {
+		public GridGen(float delta0, float lambda, int fractalDepth) {
 			_delta0 = delta0;
 			_lambda = lambda;
 			_fractalDepth = fractalDepth;
@@ -49,7 +49,7 @@ namespace World {
 			return _delta0 * Mathf.Pow(_lambda, n);
 		}
 
-		private HexData GenHex(HexCoords coords, bool save = false) {
+		private HexData GenHex(HexCoords coords, bool save) {
 			float result = 0;
 			float rnd = Random.value - 0.5f;
 			if(coords.d >= _fractalDepth) {
