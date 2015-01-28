@@ -32,7 +32,7 @@ public class SingletonContainer : MonoBehaviour {
 		gameObject.name = "Singletons";
 		// Load Console
 		if (ConsoleContainer.instance) {
-			ConsoleLog.Instance.Log("Console Loaded");
+			Debug.Log("Console Loaded");
 		} else {
 			Debug.Log("Console not loaded.");
 		};

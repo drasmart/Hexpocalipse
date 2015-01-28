@@ -129,6 +129,10 @@ Prefab:
       propertyPath: m_Center.y
       value: .5
       objectReference: {fileID: 0}
+    - target: {fileID: 14300000, guid: 9d4133d5d30b644bd87802a347eaccbe, type: 2}
+      propertyPath: m_SlopeLimit
+      value: 90
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 9d4133d5d30b644bd87802a347eaccbe, type: 2}
   m_RootGameObject: {fileID: 1525348418}
@@ -376,7 +380,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 168014, guid: 3b34baa5d73064ef49ba209a0f5d36b7, type: 2}
-  scale: .866025388
+  defaultCamera: {fileID: 367235823}
+  controller: {fileID: 1525348418}
 --- !u!4 &798594132
 Transform:
   m_ObjectHideFlags: 0
@@ -481,7 +486,7 @@ MonoBehaviour:
     baseHeight: 1
     extraHeight: 1
     perpAmount: 0
-    steepPerpAmount: .699999988
+    steepPerpAmount: .5
   movingPlatform:
     enabled: 1
     movementTransfer: 2
@@ -519,7 +524,7 @@ CharacterController:
   serializedVersion: 2
   m_Height: 2
   m_Radius: 1.5
-  m_SlopeLimit: 45
+  m_SlopeLimit: 90
   m_StepOffset: .400000006
   m_SkinWidth: .0500000007
   m_MinMoveDistance: 0

@@ -6,14 +6,20 @@ public class TerrainMaker : MonoBehaviour {
 	private GameObject _activePrisms;
 
 	public GameObject prefab;
-	public float scale = Mathf.Sqrt(3)/2;
+	public GameObject defaultCamera;
+	public GameObject controller;
 
 	// Use this for initialization
 	void Start () {
 		if (ConsoleContainer.instance != null) {
 			ConsoleCommandsRepository repo = ConsoleCommandsRepository.Instance;
 			repo.RegisterCommand ("gen", GenPrisms);
-			repo.RegisterCommand ("rem", RemovePrisms);
+			repo.RegisterCommand ("clr", RemovePrisms);
+			repo.RegisterCommand ("swap", Swap);
+			repo.RegisterCommand ("tp", Teleport);
+			repo.RegisterCommand ("help", Help);
+			ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
+			                         "Try: 'gen 400 0.5 10 128' -> 'swap' -> 'tp 0 300 0'");
 		}
 	}
 
@@ -49,5 +55,27 @@ public class TerrainMaker : MonoBehaviour {
 		_activePrisms = new GameObject ();
 		_activePrisms.transform.parent = transform;
 		return "Prisms removed.";
+	}
+
+	string Teleport(params string[] args) {
+		float x = float.Parse (args [0]);
+		float y = float.Parse (args [1]);
+		float z = float.Parse (args [2]);
+		controller.transform.position = new Vector3 (x, y, z);
+		return "Teleported";
+	}
+
+	string Swap(params string[] args) {
+		defaultCamera.SetActive (!defaultCamera.activeSelf);
+		controller.SetActive (!controller.activeSelf);
+		return "Swapped";
+	}
+
+	string Help(params string[] args) {
+		return ("Available commands:\n" + 
+		        "1. gen <delta0> <lambda> <depth> <side>\n" + 
+		        "2. clr\n" + 
+		        "3. swap\n" + 
+		        "4. tp <x> <y> <z>");
 	}
 }
