@@ -1,8 +1,8 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System;
 
 namespace World {
 
+	[Serializable()]
 	public class HexCoords  {
 
 		private static int defD = 0x7FFF;

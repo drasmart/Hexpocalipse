@@ -1,8 +1,8 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System;
 
 namespace World {
 
+	[Serializable()]
 	public class HexData {
 		public float height;
 

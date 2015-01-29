@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -6,6 +6,7 @@ namespace World {
 	
 	using HexChunk = Dictionary<HexCoords, HexData>;
 
+	[Serializable()]
 	internal class HexGrid {
 
 		// Stored Properties

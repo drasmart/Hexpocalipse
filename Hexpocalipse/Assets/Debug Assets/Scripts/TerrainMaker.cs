@@ -5,6 +5,8 @@ public class TerrainMaker : MonoBehaviour {
 
 	private GameObject _activePrisms;
 
+	private World.GridGen _generator;
+
 	public GameObject prefab;
 	public GameObject defaultCamera;
 	public GameObject controller;
@@ -14,6 +16,7 @@ public class TerrainMaker : MonoBehaviour {
 		if (ConsoleContainer.instance != null) {
 			ConsoleCommandsRepository repo = ConsoleCommandsRepository.Instance;
 			repo.RegisterCommand ("gen", GenPrisms);
+			repo.RegisterCommand ("setGen", SetGen);
 			repo.RegisterCommand ("clr", RemovePrisms);
 			repo.RegisterCommand ("swap", Swap);
 			repo.RegisterCommand ("tp", Teleport);
@@ -24,21 +27,14 @@ public class TerrainMaker : MonoBehaviour {
 	}
 
 	string GenPrisms(params string[] args) {
-		float delta0 = float.Parse (args [0]);
-		float lambda = float.Parse (args [1]);
-		int depth = int.Parse (args [2]);
-		int size = int.Parse (args [3]);
-		World.GridGen generator = new World.GridGen (delta0, lambda, depth);
-		if(_activePrisms != null) {
-			GameObject.Destroy(_activePrisms);
-		}
-		_activePrisms = new GameObject ();
-		_activePrisms.transform.parent = transform;
-		_activePrisms.transform.localScale = Vector3.one;
+		long u0 = long.Parse (args [0]);
+		long v0 = long.Parse (args [1]);
+		long u1 = long.Parse (args [2]);
+		long v1 = long.Parse (args [3]);
 		float sq15 = Mathf.Sqrt(3)/2;
-		for (int i = 0; i < size; i++) {
-			for (int j = 0; j < size; j++) {
-				World.HexData data = generator[new World.HexCoords(i, j)];
+		for (long i = u0; i < u1; i++) {
+			for (long j = v0; j < v1; j++) {
+				World.HexData data = _generator[new World.HexCoords(i, j)];
 				GameObject prism = Instantiate(prefab) as GameObject;
 				prism.transform.parent = _activePrisms.transform;
 				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15, data.height, (float)j * 0.75f);
@@ -54,6 +50,7 @@ public class TerrainMaker : MonoBehaviour {
 		}
 		_activePrisms = new GameObject ();
 		_activePrisms.transform.parent = transform;
+		_activePrisms.transform.localScale = Vector3.one;
 		return "Prisms removed.";
 	}
 
@@ -71,11 +68,27 @@ public class TerrainMaker : MonoBehaviour {
 		return "Swapped";
 	}
 
+	string SetGen(params string[] args) {
+		float delta0 = float.Parse (args [0]);
+		float lambda = float.Parse (args [1]);
+		int depth = int.Parse (args [2]);
+		_generator = new World.GridGen (delta0, lambda, depth);
+		return "Generation parameters changed.";
+	}
+
+	string Save(params string[] args) {
+		string name = args [0];
+		string path = Application.persistentDataPath;
+		string fullName = path + name;
+		return "Saving to '" + fullName + "'...";
+	}
+
 	string Help(params string[] args) {
 		return ("Available commands:\n" + 
-		        "1. gen <delta0> <lambda> <depth> <side>\n" + 
-		        "2. clr\n" + 
-		        "3. swap\n" + 
-		        "4. tp <x> <y> <z>");
+		        "1. setGen <delta0> <lambda> <depth>\n" + 
+		        "2. gen <u0> <v0> <u1> <v1>\n" + 
+		        "3. clr\n" + 
+		        "4. swap\n" + 
+		        "5. tp <x> <y> <z>");
 	}
 }

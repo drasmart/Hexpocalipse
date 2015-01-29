@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace World {
 
+	[Serializable()]
 	public class GridGen {
 
 		// Stored Properties
@@ -51,7 +53,7 @@ namespace World {
 
 		private HexData GenHex(HexCoords coords, bool save) {
 			float result = 0;
-			float rnd = Random.value - 0.5f;
+			float rnd = UnityEngine.Random.value - 0.5f;
 			if(coords.d >= _fractalDepth) {
 				result = _delta0 * rnd;
 			} else {
