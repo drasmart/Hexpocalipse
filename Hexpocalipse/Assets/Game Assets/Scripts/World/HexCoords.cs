@@ -1,103 +1,176 @@
 ﻿using System;
+using UnityEngine;
 
-namespace World {
+namespace World
+{
 
-	[Serializable()]
-	public class HexCoords  {
+    [Serializable]
+    public struct HexCoords
+    {
+        // Stored properties
 
-		private static int defD = 0x7FFF;
+        public long u;
+        public long v;
 
-		// Stored properties
+        // Constructor
 
-		private long _u;
-		private long _v;
+        public HexCoords(long u, long v)
+        {
+            this.u = u;
+            this.v = v;
+        }
 
-		private HexCoords _dep0 = null;
-		private HexCoords _dep1 = null;
+        // Computed properties
 
-		private int _d = -1;
+        private static double Sin60  = Math.Sin(Math.PI / 3);
+        private static float  Sin60f = (float)Sin60;
 
-		// Computed properties
+        public double Alpha
+        {
+            get
+            {
+                return Math.Atan2(Sin60 * v, u - 0.5f * v);
+            }
+        }
 
-		public long u { get { return _u; } }
-		public long v { get { return _v; } }
+        public int Depth
+        {
+            get
+            {
+                int result = 0x7FFF;
+                long t = u | v;
+                if (t != 0)
+                {
+                    int i = 0;
+                    while ((t & 1 << i) == 0)
+                    {
+                        i++;
+                    }
+                    result = i;
+                }
+                return result;
+            }
+        }
 
-		public int d {
-			get {
-				if (_d < 0) {
-					long t = u | v;
-					if (t == 0) {
-						_d = HexCoords.defD;
-					} else {
-						int i = 0;
-						while ((t & 1<<i) == 0) {
-							i++;
-						}
-						_d = i;
-					}
-				}
-				return _d;
-			}
-		}
+        public HexCoords[] Parents
+        {
+            get
+            {
+                int d2 = Depth + 1;
+                long u0 = (u >> d2) << d2;
+                long v0 = (v >> d2) << d2;
+                long dt = 1 << d2;
+                long du = (u - u0) > 0 ? dt : 0;
+                long dv = (v - v0) > 0 ? dt : 0;
+                HexCoords[] result = { new HexCoords(u0, v0), new HexCoords(u0 + du, v0 + dv) };
+                return result;
+            }
+        }
 
-		public HexCoords dep0 {
-			get {
-				if (_dep0 == null) {
-					CalculateDependencies();
-				}
-				return _dep0;
-			}
-		}
+        public Vector2 toVector2
+        {
+            get
+            {
+                return new Vector2(u - 0.5f * v, Sin60f * v);
+            }
+        }
 
-		public HexCoords dep1 {
-			get {
-				if (_dep1 == null) {
-					CalculateDependencies();
-				}
-				return _dep1;
-			}
-		}
+        public override string ToString()
+        {
+            return "[ u = " + u.ToString() + " ; v = " + v.ToString() + " ]";
+        }
 
+        // Parametrized properties
 
-		// Lifecycle
+        public Vector3 toVector3(float y)
+        {
+            return new Vector3(u - 0.5f * v, y, Sin60f * v);
+        }
 
-		public HexCoords(long u, long v) {
-			_u = u;
-			_v = v;
-		}
+        public HexCoords ClosestAxialDirectionTo(HexCoords target)
+        {
+            HexCoords result = target - this;
+            result.u = Math.Sign(result.u);
+            result.v = Math.Sign(result.v);
+            return result;
+        }
 
-		// public methods
+        public HexCoords ChunkCoords(int depth)
+        {
+            return this >> depth;
+        }
 
-		public HexCoords ChunkCoords(int depth) {
-			return new HexCoords (u >> depth, v >> depth);
-		}
+        public HexCoords NextIn(HexCoords direction)
+        {
+            return this + Depth * direction;
+        }
 
-		// Support for usage as dictionary key
+        // public static operators
 
-		public override bool Equals(System.Object obj) {
-			HexCoords other = (obj as HexCoords);
-			if (other != null) {
-				return u == other.u && v == other.v;
-			} else {
-				return false;
-			}
-		}
+        public static HexCoords operator -(HexCoords rhs)
+        {
+            return new HexCoords(-rhs.u, -rhs.v);
+        }
 
-		public override int GetHashCode() {
-			return (((int)u & 0xFF) << 16) | ((int)v & 0xFF);
-		}
-		
-		// private methods 
+        public static HexCoords operator +(HexCoords lhs, HexCoords rhs)
+        {
+            return new HexCoords(lhs.u + rhs.u, lhs.v + rhs.v);
+        }
 
-		void CalculateDependencies() {
-			int d2 = d + 1;
-			long u0 = (u >> d2) << d2;
-			long v0 = (v >> d2) << d2;
-			_dep0 = new HexCoords (u0, v0);
-			long du = (u - u0) > 0 ? 1 << d2 : 0;
-			long dv = (v - v0) > 0 ? 1 << d2 : 0;
-			_dep1 = new HexCoords (u0 + du, v0 + dv);
-		}
-	}
+        public static HexCoords operator -(HexCoords lhs, HexCoords rhs)
+        {
+            return new HexCoords(lhs.u - rhs.u, lhs.v - rhs.v);
+        }
+
+        public static HexCoords operator *(HexCoords lhs, long rhs)
+        {
+            return new HexCoords(lhs.u * rhs, lhs.v * rhs);
+        }
+
+        public static HexCoords operator *(long lhs, HexCoords rhs)
+        {
+            return new HexCoords(lhs * rhs.u, lhs * rhs.v);
+        }
+
+        public static HexCoords operator /(HexCoords lhs, long rhs)
+        {
+            return new HexCoords(lhs.u / rhs, lhs.v / rhs);
+        }
+
+        public static HexCoords operator %(HexCoords lhs, long rhs)
+        {
+            return new HexCoords(lhs.u % rhs, lhs.v % rhs);
+        }
+
+        public static HexCoords operator <<(HexCoords lhs, int rhs)
+        {
+            return new HexCoords(lhs.u << rhs, lhs.v << rhs);
+        }
+
+        public static HexCoords operator >>(HexCoords lhs, int rhs)
+        {
+            return new HexCoords(lhs.u >> rhs, lhs.v >> rhs);
+        }
+
+        //// Support for usage as dictionary key
+
+        //public override bool Equals(Object obj)
+        //{
+        //    HexCoords other = (obj as HexCoords);
+        //    if (other != null)
+        //    {
+        //        return u == other.u && v == other.v;
+        //    }
+        //    else
+        //    {
+        //        return false;
+        //    }
+        //}
+
+        //public override int GetHashCode()
+        //{
+        //    return (((int)u & 0xFF) << 16) | ((int)v & 0xFF);
+        //}
+    }
 
 }

@@ -5,7 +5,8 @@ public class TerrainMaker : MonoBehaviour {
 
 	private GameObject _activePrisms;
 
-	private World.GridGen _generator;
+    [SerializeField]
+	private World.HexGridDriver _generator;
 
 	public GameObject prefab;
 	public GameObject defaultCamera;
@@ -21,7 +22,8 @@ public class TerrainMaker : MonoBehaviour {
 			repo.RegisterCommand ("swap", Swap);
 			repo.RegisterCommand ("tp", Teleport);
 			repo.RegisterCommand ("help", Help);
-			ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
+            repo.RegisterCommand ("defGen", DefGen);
+            ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
 			                         "Try: 'setGen 400 0.5 10' -> 'gen 0 0 128 128' -> 'swap' -> 'tp 0 300 0'");
 		}
         RemovePrisms();
@@ -35,10 +37,10 @@ public class TerrainMaker : MonoBehaviour {
 		float sq15 = Mathf.Sqrt(3)/2;
 		for (long i = u0; i < u1; i++) {
 			for (long j = v0; j < v1; j++) {
-				World.HexData data = _generator[new World.HexCoords(i, j)];
+				float height = _generator[new World.HexCoords(i, j)];
 				GameObject prism = Instantiate(prefab) as GameObject;
 				prism.transform.parent = _activePrisms.transform;
-				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15, data.height, (float)j * 0.75f);
+				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15, height, (float)j * 0.75f);
 				prism.transform.localScale = prefab.transform.localScale;
 			}
 		}
@@ -73,7 +75,7 @@ public class TerrainMaker : MonoBehaviour {
 		float delta0 = float.Parse (args [0]);
 		float lambda = float.Parse (args [1]);
 		int depth = int.Parse (args [2]);
-		_generator = new World.GridGen (delta0, lambda, depth);
+		_generator = new World.HexGridDriver (depth, delta0, lambda);
 		return "Generation parameters changed.";
 	}
 
@@ -92,4 +94,20 @@ public class TerrainMaker : MonoBehaviour {
 		        "4. swap\n" + 
 		        "5. tp <x> <y> <z>");
 	}
+
+    string DefGen(params string[] args)
+    {
+        float lambda = 0.5f;
+        int   depth  = 6;
+        if (args.Length == 2)
+        {
+            lambda = float.Parse(args[0]);
+            depth = int.Parse(args[1]);
+        }
+        string[] s1 = { (0.39f * (1 << depth)).ToString(), lambda.ToString(), depth.ToString() };
+        string o1 = SetGen(s1);
+        string[] s2 = { "0", "0", "128", "128" };
+        string o2 = GenPrisms(s2);
+        return o1 + "\n" + o2;
+    }
 }
