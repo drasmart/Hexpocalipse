@@ -84,7 +84,7 @@ namespace World {
 		}
 
 		public override int GetHashCode() {
-			return ((int)u & 0xFF00) + ((int)v & 0x00FF);
+			return (((int)u & 0xFF) << 16) | ((int)v & 0xFF);
 		}
 		
 		// private methods 

@@ -1,4 +1,4 @@
-using UnityEngine;
+    using UnityEngine;
 using System.Collections;
 
 public class TerrainMaker : MonoBehaviour {
@@ -22,9 +22,10 @@ public class TerrainMaker : MonoBehaviour {
 			repo.RegisterCommand ("tp", Teleport);
 			repo.RegisterCommand ("help", Help);
 			ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
-			                         "Try: 'gen 400 0.5 10 128' -> 'swap' -> 'tp 0 300 0'");
+			                         "Try: 'setGen 400 0.5 10' -> 'gen 0 0 128 128' -> 'swap' -> 'tp 0 300 0'");
 		}
-	}
+        RemovePrisms();
+    }
 
 	string GenPrisms(params string[] args) {
 		long u0 = long.Parse (args [0]);

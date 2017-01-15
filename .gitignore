@@ -11,3 +11,5 @@ Hexpocalipse/Hexpocalipse-csharp.sln
 Hexpocalipse/Hexpocalipse.sln
 Hexpocalipse/Hexpocalipse.userprefs
 Hexpocalipse/Builds/
+Hexpocalipse/.vs/
+*.csproj
