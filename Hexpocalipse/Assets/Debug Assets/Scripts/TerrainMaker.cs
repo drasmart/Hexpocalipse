@@ -1,4 +1,5 @@
-    using UnityEngine;
+using UnityEngine;
+using World;
 using System.Collections;
 
 public class TerrainMaker : MonoBehaviour {
@@ -37,13 +38,16 @@ public class TerrainMaker : MonoBehaviour {
 		float sq15 = Mathf.Sqrt(3)/2;
 		for (long i = u0; i < u1; i++) {
 			for (long j = v0; j < v1; j++) {
-				float height = _generator[new World.HexCoords(i, j)];
+                HexCoords coords = new HexCoords(i, j);
+                float height = _generator[coords];
 				GameObject prism = Instantiate(prefab) as GameObject;
 				prism.transform.parent = _activePrisms.transform;
 				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15, height, (float)j * 0.75f);
 				prism.transform.localScale = prefab.transform.localScale;
-			}
+                prism.transform.name = "Prism " + coords.ToString();
+            }
 		}
+        World.Logger.Flush();
 		return "Generation Finished.";
 	}
 
@@ -97,8 +101,8 @@ public class TerrainMaker : MonoBehaviour {
 
     string DefGen(params string[] args)
     {
-        float lambda = 0.5f;
-        int   depth  = 7;
+        float lambda = 0.3f;
+        int   depth  = 6;
         if (args.Length == 2)
         {
             lambda = float.Parse(args[0]);
@@ -106,7 +110,8 @@ public class TerrainMaker : MonoBehaviour {
         }
         string[] s1 = { (0.39f * (1 << depth)).ToString(), lambda.ToString(), depth.ToString() };
         string o1 = SetGen(s1);
-        string[] s2 = { "0", "0", "128", "128" };
+        string sz = Mathf.Min(128, 4 << depth).ToString();
+        string[] s2 = { "0", "0", sz, sz };
         string o2 = GenPrisms(s2);
         return o1 + "\n" + o2;
     }

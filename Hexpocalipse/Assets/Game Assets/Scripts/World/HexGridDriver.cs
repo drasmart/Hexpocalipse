@@ -46,15 +46,20 @@ namespace World
                 return null;
             }
             float[] result = new float[1L << (2 * planeIndex)];
-            //Debug.Log("Size = " + result.Length.ToString());
+            //Logger.Log("Size = " + result.Length.ToString());
             int chunkSize = 1 << planeIndex;
-            for(int u = 0; u < chunkSize; u++)
+            HexCoords realChunkStart = (chunkStart << chunkDepth);
+            for (int u = 0; u < chunkSize; u++)
             {
                 for(int v = 0; v < chunkSize; v++)
                 {
-                    HexCoords tCoords = new HexCoords(u, v) << (chunkDepth - planeIndex);
-                    //Debug.Log("Index = " + ((u << planeIndex) | v).ToString());
-                    result[(u << planeIndex) | v] = Locate(tCoords, false);
+                    HexCoords dCoords = new HexCoords(u, v);
+                    HexCoords tCoords = realChunkStart + (dCoords << (chunkDepth - planeIndex)); 
+                    //Logger.Log("Index = " + ((u << planeIndex) | v).ToString());
+                    float value = Locate(tCoords, false);
+                    int indx = (u << planeIndex) | v;
+                    result[indx] = value;
+                    //Logger.Log("cfs = " + chunkStart.ToString() + " x " + planeIndex.ToString() + " / " + realChunkStart.ToString() + " [ " + indx.ToString() + " ] <--(S)-- " + dCoords.ToString() + " / " + tCoords.ToString() + " ( " + value.ToString() + " )");
                 }
             }
             return result;
@@ -81,19 +86,26 @@ namespace World
         private float Locate(HexCoords coords, bool makeNewChunks)
         {
             int d = coords.Depth;
-            if(d >= chunkDepth)
+            if (d >= chunkDepth)
             {
                 d = 0;
             } else
             {
                 d = chunkDepth - d;
             }
-            HexCoords newCoords = coords.ChunkCoords(coords.Depth);
+            HexCoords newCoords = coords.ChunkCoords(chunkDepth - d);
+            float result;
             if (makeNewChunks || dataPlanes[d].Contains(newCoords))
             {
-                return dataPlanes[d].ValueAt(newCoords);
+                result = dataPlanes[d].ValueAt(newCoords);
+                //Logger.Log("req = " + coords.ToString() + " ; d = " + d.ToString() + " ; newCoords = " + newCoords.ToString() + " ( " + result.ToString() + " )");
             }
-            return gridGen.Evaluate(coords, this, alphaPlane);
+            else
+            {
+                result = gridGen.Evaluate(coords, this, alphaPlane);
+                //Logger.Log("req = " + coords.ToString() + " <--(G)-- " + result.ToString());
+            }
+            return result;
         }
     }
 }

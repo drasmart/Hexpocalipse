@@ -35,17 +35,24 @@ namespace World
         {
             if(coords.Depth >= depth)
             {
+                //Logger.Log("req = " + coords.ToString() + " -> Random");
                 return UnityEngine.Random.value * delta0;
             }
             HexCoords[] parents = coords.Parents;
+            //if (coords.Depth == depth - 1)
+            //{
+            //    Logger.Log("req = " + coords.ToString() + " : Parents : " + parents[0].ToString() + " , " + parents[1].ToString());
+            //}
             float g = GradientAt(parents, valueStorage, alphaStorage);
             float v0 = valueStorage.ValueAt(parents[0]);
             float v1 = valueStorage.ValueAt(parents[1]);
+            //Logger.Log("req = " + coords.ToString() + " : Parents : " + parents[0].ToString() + " ( " + v0.ToString() + " ) , " + parents[1].ToString() + " ( " + v1.ToString() + " ) ");
             float cd = DeltaAt(depth - coords.Depth - 1);
-            float dv = cd * (UnityEngine.Random.value - 0.5f + g);
+            //float rv = UnityEngine.Random.value - 0.5f;
+            float dv = cd * (/*rv*/ + g);
             float mv = (v0 + v1) / 2.0f;
             float result = mv + dv;
-            //Debug.Log("req = " + coords.ToString() + " ; mv = " + mv.ToString() + " ; cd = " + cd.ToString() + " ; dv = " + dv.ToString() + " ; result = " + result.ToString());
+            //Logger.Log("req = " + coords.ToString() + " ; mv = " + mv.ToString() + " ; cd = " + cd.ToString() + " ; dv = " + dv.ToString() + " ; result = " + result.ToString());
             return result;
         }
 
@@ -65,7 +72,7 @@ namespace World
                 HexCoords[] p0 = section[0].Parents;
                 float vA = valueStorage.ValueAt(p0[0]);
                 float vB = valueStorage.ValueAt(p0[1]);
-                g1 = (vB - vA) / DeltaAt(depth - section[0].Depth - 1);
+                g1 = (vB - vA) / DeltaAt(depth - section[0].Depth - 2);
             }
             if (section[1].Depth >= depth - 1)
             {
@@ -78,9 +85,9 @@ namespace World
                 HexCoords[] p1 = section[1].Parents;
                 float vA = valueStorage.ValueAt(p1[0]);
                 float vB = valueStorage.ValueAt(p1[1]);
-                g2 = (vB - vA) / DeltaAt(depth - section[1].Depth - 1);
+                g2 = (vB - vA) / DeltaAt(depth - section[1].Depth - 2);
             }
-            return (g1 - g2) / 2.0f;
+            return (g1 + g2) / 2.0f;
         }
 
         private float DeltaAt(int depth)

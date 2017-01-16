@@ -15,8 +15,8 @@ namespace World
         private Dictionary<HexCoords, float[]> chunks;
         [SerializeField]
         private HexChunkProvider chunkProvider;
-        [SerializeField]
-        private List<ChunksSection> debugChunks;
+        //[SerializeField]
+        //private List<ChunksSection> debugChunks;
 
         public HexPlane(int chunkDepth, HexChunkProvider chunkProvider)
         {
@@ -67,27 +67,27 @@ namespace World
             return retChunk[(delta.u << chunkDepth) | delta.v];
         }
 
-        void RefreshDebugChunks()
-        {
-            debugChunks = new List<ChunksSection>();
-            foreach (KeyValuePair<HexCoords, float[]> entry in chunks)
-            {
-                debugChunks.Add(new ChunksSection(entry.Key, entry.Value));
-            }
-        }
+        //void RefreshDebugChunks()
+        //{
+        //    debugChunks = new List<ChunksSection>();
+        //    foreach (KeyValuePair<HexCoords, float[]> entry in chunks)
+        //    {
+        //        debugChunks.Add(new ChunksSection(entry.Key, entry.Value));
+        //    }
+        //}
 
-        [Serializable]
-        public struct ChunksSection
-        {
-            public HexCoords coords;
-            public float[] chunks;
+        //[Serializable]
+        //public struct ChunksSection
+        //{
+        //    public HexCoords coords;
+        //    public float[] chunks;
 
-            public ChunksSection(HexCoords coords, float[] chunks)
-            {
-                this.coords = coords;
-                this.chunks = chunks;
-            }
-        }
+        //    public ChunksSection(HexCoords coords, float[] chunks)
+        //    {
+        //        this.coords = coords;
+        //        this.chunks = chunks;
+        //    }
+        //}
     }
 
 }
