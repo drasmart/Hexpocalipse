@@ -53,15 +53,15 @@ namespace World
                 //RefreshDebugChunks();
             }
             retChunk = chunks[chunkStart];
-            HexCoords delta = coords - chunkStart;
-            //if(retChunk.Length != (1L << (2 * chunkDepth)))
+            HexCoords delta = coords - (chunkStart << chunkDepth);
+            //if (retChunk.Length != (1L << (2 * chunkDepth)))
             //{
             //    UnityEngine.Debug.Log("length mismatch: " + retChunk.Length.ToString() + " vs " + (1L << (2 * chunkDepth)).ToString());
             //    return 0.0f;
             //}
-            //if(((delta.u << chunkDepth) | delta.v) >= retChunk.Length)
+            //if (((delta.u << chunkDepth) | delta.v) >= retChunk.Length)
             //{
-            //    UnityEngine.Debug.Log("Wrong index: " + ((delta.u << chunkDepth) | delta.v).ToString() + " [ " +delta.u.ToString() + " ; "+ delta.v.ToString() + " ] / " + retChunk.Length.ToString());
+            //    UnityEngine.Debug.Log("Wrong index: " + ((delta.u << chunkDepth) | delta.v).ToString() + " [ " + delta.u.ToString() + " ; " + delta.v.ToString() + " ] / " + retChunk.Length.ToString());
             //    return 0.0f;
             //}
             return retChunk[(delta.u << chunkDepth) | delta.v];

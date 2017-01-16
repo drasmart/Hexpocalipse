@@ -98,7 +98,7 @@ public class TerrainMaker : MonoBehaviour {
     string DefGen(params string[] args)
     {
         float lambda = 0.5f;
-        int   depth  = 6;
+        int   depth  = 7;
         if (args.Length == 2)
         {
             lambda = float.Parse(args[0]);
