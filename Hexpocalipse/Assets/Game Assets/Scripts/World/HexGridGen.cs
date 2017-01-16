@@ -48,8 +48,8 @@ namespace World
             float v1 = valueStorage.ValueAt(parents[1]);
             //Logger.Log("req = " + coords.ToString() + " : Parents : " + parents[0].ToString() + " ( " + v0.ToString() + " ) , " + parents[1].ToString() + " ( " + v1.ToString() + " ) ");
             float cd = DeltaAt(depth - coords.Depth - 1);
-            //float rv = UnityEngine.Random.value - 0.5f;
-            float dv = cd * (/*rv*/ + g);
+            float rv = UnityEngine.Random.value - 0.5f;
+            float dv = cd * (rv + g / 2.0f);
             float mv = (v0 + v1) / 2.0f;
             float result = mv + dv;
             //Logger.Log("req = " + coords.ToString() + " ; mv = " + mv.ToString() + " ; cd = " + cd.ToString() + " ; dv = " + dv.ToString() + " ; result = " + result.ToString());
@@ -58,7 +58,6 @@ namespace World
 
         private float GradientAt(HexCoords[] section, HexDataStorage valueStorage, HexDataStorage alphaStorage)
         {
-            return 0.0f;
             float g1;
             float g2;
             HexCoords direction = section[0].ClosestAxialDirectionTo(section[1]);
@@ -78,7 +77,7 @@ namespace World
             {
                 float a2 = alphaStorage.ValueAt(section[1].ChunkCoords(depth));
                 Vector2 av = new Vector2(Mathf.Cos(a2), Mathf.Sin(a2));
-                g2 = Mathf.Cos(Mathf.Deg2Rad * Vector2.Angle(av, direction.toVector2));
+                g2 = Mathf.Cos(Mathf.Deg2Rad * Vector2.Angle(av, -direction.toVector2));
             }
             else
             {
