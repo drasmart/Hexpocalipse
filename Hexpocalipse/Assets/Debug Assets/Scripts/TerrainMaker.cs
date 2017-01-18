@@ -1,5 +1,7 @@
 using UnityEngine;
 using World;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections;
 
 public class TerrainMaker : MonoBehaviour {
@@ -12,6 +14,15 @@ public class TerrainMaker : MonoBehaviour {
 	public GameObject prefab;
 	public GameObject defaultCamera;
 	public GameObject controller;
+
+    string savePath = null;
+    string paramsPath = null;
+
+    void Awake()
+    {
+        savePath = Application.persistentDataPath + "/saveTest";
+        paramsPath = savePath + "/genParams.dat";
+    }
 
 	// Use this for initialization
 	void Start () {
@@ -26,8 +37,13 @@ public class TerrainMaker : MonoBehaviour {
             repo.RegisterCommand ("defGen", DefGen);
             ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
 			                         "Try: 'setGen 400 0.5 10' -> 'gen 0 0 128 128' -> 'swap' -> 'tp 0 300 0'");
-		}
+        }
+        if(!Directory.Exists(savePath))
+        {
+            Directory.CreateDirectory(savePath);
+        }
         RemovePrisms();
+        LoadGenParams();
     }
 
 	string GenPrisms(params string[] args) {
@@ -75,13 +91,43 @@ public class TerrainMaker : MonoBehaviour {
 		return "Swapped";
 	}
 
-	string SetGen(params string[] args) {
-		float delta0 = float.Parse (args [0]);
-		float lambda = float.Parse (args [1]);
-		int depth = int.Parse (args [2]);
-		_generator = new World.HexGridDriver (depth, delta0, lambda);
-		return "Generation parameters changed.";
-	}
+    string SetGen(params string[] args)
+    {
+        SetGenParams(args);
+        SaveGenParams(args);
+        return "Generation parameters changed.";
+    }
+
+    void SetGenParams(string[] args)
+    {
+        float delta0 = float.Parse(args[0]);
+        float lambda = float.Parse(args[1]);
+        int cDepth = int.Parse(args[2]);
+        int fDepth = (args.Length > 3) ? int.Parse(args[3]) : cDepth;
+        _generator = new World.HexGridDriver(cDepth, fDepth, delta0, lambda, savePath);
+    }
+
+    void SaveGenParams(string[] args)
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        FileStream fs = File.Create(paramsPath);
+        bf.Serialize(fs, args);
+        fs.Close();
+    }
+
+    void LoadGenParams()
+    {
+        if(!File.Exists(paramsPath))
+        {
+            return;
+        }
+        BinaryFormatter bf = new BinaryFormatter();
+        FileStream fs = File.Open(paramsPath, FileMode.Open);
+        string[] args = (string[])bf.Deserialize(fs);
+        fs.Close();
+
+        SetGenParams(args);
+    }
 
 	string Save(params string[] args) {
 		string name = args [0];
@@ -92,7 +138,7 @@ public class TerrainMaker : MonoBehaviour {
 
 	string Help(params string[] args) {
 		return ("Available commands:\n" + 
-		        "1. setGen <delta0> <lambda> <depth>\n" + 
+		        "1. setGen <delta0> <lambda> <chunkDepth> [<fractalDepth>]\n" + 
 		        "2. gen <u0> <v0> <u1> <v1>\n" + 
 		        "3. clr\n" + 
 		        "4. swap\n" + 
@@ -102,15 +148,17 @@ public class TerrainMaker : MonoBehaviour {
     string DefGen(params string[] args)
     {
         float lambda = 0.3f;
-        int   depth  = 6;
-        if (args.Length == 2)
+        int   cDepth = 6;
+        int   fDepth = 7;
+        if (args.Length >= 2)
         {
             lambda = float.Parse(args[0]);
-            depth = int.Parse(args[1]);
+            cDepth = int.Parse(args[1]);
+            fDepth = (args.Length > 3) ? int.Parse(args[3]) : cDepth;
         }
-        string[] s1 = { (0.39f * (1 << depth)).ToString(), lambda.ToString(), depth.ToString() };
+        string[] s1 = { (0.39f * (1 << fDepth)).ToString(), lambda.ToString(), cDepth.ToString(), fDepth.ToString() };
         string o1 = SetGen(s1);
-        string sz = Mathf.Min(128, 4 << depth).ToString();
+        string sz = Mathf.Min(128, 4 << cDepth).ToString();
         string[] s2 = { "0", "0", sz, sz };
         string o2 = GenPrisms(s2);
         return o1 + "\n" + o2;

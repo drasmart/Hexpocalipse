@@ -7,15 +7,15 @@ namespace World
     {
         static string log = null;
 
-        //public static void Log(string msg)
-        //{
-        //    if (log == null)
-        //    {
-        //        log = msg;
-        //        return;
-        //    }
-        //    log += "\n" + msg;
-        //}
+        public static void Log(string msg)
+        {
+            if (log == null)
+            {
+                log = msg;
+                return;
+            }
+            log += "\n" + msg;
+        }
 
         public static void Flush()
         {

@@ -17,15 +17,19 @@ namespace World
         [SerializeField]
         HexGridGen gridGen;
 
-        public HexGridDriver(int chunkDepth, float delta0, float lambda)
+        public HexGridDriver(int chunkDepth, int fractalDepth, float delta0, float lambda, string savePath = null)
         {
+            string alphaPath = (savePath == null) ? null : (savePath + "/h/a");
+            string heightPath = (savePath == null) ? null : (savePath + "/h/");
+
             this.chunkDepth = chunkDepth;
-            gridGen    = new HexGridGen(chunkDepth, delta0, lambda);
-            alphaPlane = new HexPlane(chunkDepth, new HexAlphaGen());
+            gridGen    = new HexGridGen(fractalDepth, delta0, lambda);
+            alphaPlane = new HexPlane(chunkDepth, new HexAlphaGen(), alphaPath);
             dataPlanes = new HexPlane[chunkDepth + 1];
             for(int i = 0; i <= chunkDepth; i++)
             {
-                dataPlanes[i] = new HexPlane(i, this);
+                string planePath = (heightPath == null) ? null : (heightPath + i.ToString());
+                dataPlanes[i] = new HexPlane(i, this, planePath);
             }
         }
 
@@ -46,7 +50,6 @@ namespace World
                 return null;
             }
             float[] result = new float[1L << (2 * planeIndex)];
-            //Logger.Log("Size = " + result.Length.ToString());
             int chunkSize = 1 << planeIndex;
             HexCoords realChunkStart = (chunkStart << chunkDepth);
             for (int u = 0; u < chunkSize; u++)
@@ -55,11 +58,9 @@ namespace World
                 {
                     HexCoords dCoords = new HexCoords(u, v);
                     HexCoords tCoords = realChunkStart + (dCoords << (chunkDepth - planeIndex)); 
-                    //Logger.Log("Index = " + ((u << planeIndex) | v).ToString());
                     float value = Locate(tCoords, false);
                     int indx = (u << planeIndex) | v;
                     result[indx] = value;
-                    //Logger.Log("cfs = " + chunkStart.ToString() + " x " + planeIndex.ToString() + " / " + realChunkStart.ToString() + " [ " + indx.ToString() + " ] <--(S)-- " + dCoords.ToString() + " / " + tCoords.ToString() + " ( " + value.ToString() + " )");
                 }
             }
             return result;
@@ -98,12 +99,10 @@ namespace World
             if (makeNewChunks || dataPlanes[d].Contains(newCoords))
             {
                 result = dataPlanes[d].ValueAt(newCoords);
-                //Logger.Log("req = " + coords.ToString() + " ; d = " + d.ToString() + " ; newCoords = " + newCoords.ToString() + " ( " + result.ToString() + " )");
             }
             else
             {
                 result = gridGen.Evaluate(coords, this, alphaPlane);
-                //Logger.Log("req = " + coords.ToString() + " <--(G)-- " + result.ToString());
             }
             return result;
         }

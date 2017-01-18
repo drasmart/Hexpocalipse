@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 
 namespace World
@@ -12,17 +14,23 @@ namespace World
         [SerializeField]
         public int chunkDepth { get; private set; }
         [SerializeField]
+        private string savePath;
+        [SerializeField]
         private Dictionary<HexCoords, float[]> chunks;
         [SerializeField]
         private HexChunkProvider chunkProvider;
-        //[SerializeField]
-        //private List<ChunksSection> debugChunks;
 
-        public HexPlane(int chunkDepth, HexChunkProvider chunkProvider)
+        public HexPlane(int chunkDepth, HexChunkProvider chunkProvider, string savePath = null)
         {
             this.chunkDepth = chunkDepth;
             this.chunkProvider = chunkProvider;
+            this.savePath = savePath;
             chunks = new Dictionary<HexCoords, float[]>();
+
+            if (savePath != null && !Directory.Exists(savePath))
+            {
+                Directory.CreateDirectory(savePath);
+            }
         }
 
         public float this[HexCoords coords]
@@ -42,52 +50,68 @@ namespace World
         {
             HexCoords chunkStart = coords.ChunkCoords(chunkDepth);
             float[] retChunk = null;
-            if(!chunks.ContainsKey(chunkStart))
+            if (!chunks.ContainsKey(chunkStart))
             {
-                float[] retVal = chunkProvider.ChunkForStorage(this, chunkStart);
-                if(retVal == null)
+                retChunk = LoadChunk(chunkStart);
+                if (retChunk == null)
                 {
-                    return 0.0f;
+                    retChunk = chunkProvider.ChunkForStorage(this, chunkStart);
+                    if (retChunk == null)
+                    {
+                        return 0.0f;
+                    }
+                    SaveChunk(chunkStart, retChunk);
                 }
-                chunks[chunkStart] = retVal;
-                //RefreshDebugChunks();
+                chunks[chunkStart] = retChunk;
             }
-            retChunk = chunks[chunkStart];
+            else
+            {
+                retChunk = chunks[chunkStart];
+            }
             HexCoords delta = coords - (chunkStart << chunkDepth);
-            //if (retChunk.Length != (1L << (2 * chunkDepth)))
-            //{
-            //    UnityEngine.Debug.Log("length mismatch: " + retChunk.Length.ToString() + " vs " + (1L << (2 * chunkDepth)).ToString());
-            //    return 0.0f;
-            //}
-            //if (((delta.u << chunkDepth) | delta.v) >= retChunk.Length)
-            //{
-            //    UnityEngine.Debug.Log("Wrong index: " + ((delta.u << chunkDepth) | delta.v).ToString() + " [ " + delta.u.ToString() + " ; " + delta.v.ToString() + " ] / " + retChunk.Length.ToString());
-            //    return 0.0f;
-            //}
             return retChunk[(delta.u << chunkDepth) | delta.v];
         }
 
-        //void RefreshDebugChunks()
-        //{
-        //    debugChunks = new List<ChunksSection>();
-        //    foreach (KeyValuePair<HexCoords, float[]> entry in chunks)
-        //    {
-        //        debugChunks.Add(new ChunksSection(entry.Key, entry.Value));
-        //    }
-        //}
+        void SaveChunk(HexCoords coords, float[] values)
+        {
+            string path = PathForSavingChunk(coords);
+            if(path == null)
+            {
+                return;
+            }
+            BinaryFormatter bf = new BinaryFormatter();
+            FileStream fs = File.Create(path);
+            bf.Serialize(fs, values);
+            fs.Close();
 
-        //[Serializable]
-        //public struct ChunksSection
-        //{
-        //    public HexCoords coords;
-        //    public float[] chunks;
+            //Logger.Log("File '" + path + "' saved.");
+        }
 
-        //    public ChunksSection(HexCoords coords, float[] chunks)
-        //    {
-        //        this.coords = coords;
-        //        this.chunks = chunks;
-        //    }
-        //}
+        float[] LoadChunk(HexCoords coords)
+        {
+            string path = PathForSavingChunk(coords);
+            if (path == null || !File.Exists(path))
+            {
+                return null;
+            }
+            BinaryFormatter bf = new BinaryFormatter();
+            FileStream fs = File.Open(path, FileMode.Open);
+            float[] result = (float[])bf.Deserialize(fs);
+            fs.Close();
+
+            //Logger.Log("File '" + path + "' loaded.");
+
+            return result;
+        }
+
+        string PathForSavingChunk(HexCoords coords)
+        {
+            if(savePath == null)
+            {
+                return null;
+            }
+            return savePath + "/" + coords.ToString() + ".dat";
+        }
     }
 
 }
