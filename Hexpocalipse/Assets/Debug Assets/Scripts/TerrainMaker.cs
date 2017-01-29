@@ -14,6 +14,7 @@ public class TerrainMaker : MonoBehaviour {
 	public GameObject prefab;
 	public GameObject defaultCamera;
 	public GameObject controller;
+    public Material triMaterial;
     public Material hexMaterial;
 
     string savePath = null;
@@ -37,6 +38,7 @@ public class TerrainMaker : MonoBehaviour {
 			repo.RegisterCommand("help", Help);
             repo.RegisterCommand("defGen", DefGen);
             repo.RegisterCommand("gen3", Gen3);
+            repo.RegisterCommand("gen6", Gen6);
             ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
 			                         "Try: 'defGen' -> 'swap' -> 'tp 0 300 0'");
         }
@@ -46,6 +48,7 @@ public class TerrainMaker : MonoBehaviour {
         }
         RemovePrisms();
         LoadGenParams();
+        //Gen6("0", "0", "0", "8");
     }
 
 	string GenPrisms(params string[] args) {
@@ -152,7 +155,8 @@ public class TerrainMaker : MonoBehaviour {
 		        "4. swap\n" +
                 "5. tp <x> <y> <z>" +
                 "6. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
-                "7. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>");
+                "7. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>" +
+                "8. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>");
 	}
 
     string DefGen(params string[] args)
@@ -183,7 +187,7 @@ public class TerrainMaker : MonoBehaviour {
         MeshFilter filter = result.GetComponent<MeshFilter>();
         MeshCollider collider = result.GetComponent<MeshCollider>();
         MeshRenderer renderer = result.GetComponent<MeshRenderer>();
-        renderer.material = hexMaterial;
+        renderer.material = triMaterial;
 
         float hMin = float.PositiveInfinity;
         float hMax = float.NegativeInfinity;
@@ -263,6 +267,192 @@ public class TerrainMaker : MonoBehaviour {
         return result;
     }
 
+    public enum PrismGenMode
+    {
+        NegU = 1 << 0,
+        NegV = 1 << 1,
+        NegW = 1 << 2,
+        PosU = 1 << 3,
+        PosV = 1 << 4,
+        PosW = 1 << 5,
+        Collider = 1 << 6,
+        AllSides = (NegU | NegV | NegW | PosU | PosV | PosW),
+    }
+
+    Mesh GenMesh6(float [] h, long size, Vector3 center, PrismGenMode mode)
+    {
+        float t = 1 / 3.0f;
+        float r = Mathf.Sqrt(t);
+        Vector2 vR = new Vector2(0.5f, -0.5f);
+        Vector2 vS = new Vector2(0.5f, 0.5f);
+        Vector2 vT = new Vector2(0.0f, 1.0f);
+        Vector2[] hexS = { -vS, -vT, vR, vS, vT, -vR };
+        Vector3[] hexP = new Vector3[6];
+        Vector2[] hexT = new Vector2[6];
+        for (int k = 0; k < 6; k++)
+        {
+            Vector2 v = hexS[k];
+            hexP[k] = new Vector3(v.x, 0, r * v.y);
+            hexT[k] = new Vector2(v.x, t * v.y);
+        }
+        int[] hexTriOrder = { 0, 5, 1, 1, 5, 2, 2, 5, 4, 2, 4, 3 };
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<Vector2> uv = new List<Vector2>();
+        List<int> triangles = new List<int>();
+
+        long size2 = size + 2;
+        long size02 = size * size;
+
+        for (int u = 0; u < size; u++)
+        {
+            for (int v = 0; v < size; v++)
+            {
+                Vector3 pos = new HexCoords(u, v).toVector3(h[(u + 1) * size2 + v + 1]) - center;
+                for(int k = 0; k < 6; k++)
+                {
+                    vertices.Add(pos + hexP[k]);
+                    float q = (v - 1) / 2.0f;
+                    uv.Add(new Vector2(u - q, q) + hexT[k]);
+                }
+                int idxV = (int)(6 * (u * size + v));
+                for (int j = 0; j < 12; j++)
+                {
+                    triangles.Add(idxV + hexTriOrder[j]);
+                }
+            }
+        }
+
+        PrismGenMode[] sideTests = { PrismGenMode.PosW, PrismGenMode.PosV, PrismGenMode.NegU, PrismGenMode.NegW, PrismGenMode.NegV, PrismGenMode.PosU };
+        HexCoords[] cellTests = { new HexCoords(-1, -1), new HexCoords(0, -1), new HexCoords(1, 0), new HexCoords(1, 1), new HexCoords(0, 1), new HexCoords(-1, 0) };
+        int addedV = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            if ((mode & sideTests[i]) == 0)
+            {
+                continue;
+            }
+            long du = cellTests[i].u;
+            long dv = cellTests[i].v;
+            int dvTL = i;
+            int dvTR = (i + 1) % 6;
+            int dvBL = (i + 3) % 6;
+            int dvBR = (i + 4) % 6;
+            for (long u = 0; u < size; u++)
+            {
+                for (long v = 0; v < size; v++)
+                {
+                    int idxHc = (int)((u + 1) * size2 + (v + 1));
+                    int idxHx = (int)((u + 1 + du) * size2 + (v + 1 + dv));
+                    if(h[idxHx] >= h[idxHc])
+                    {
+                        continue;
+                    }
+                    int idxVc = (int)(6 * (u * size + v));
+                    int idxVx = (int)(6 * ((u + du) * size + (v + dv)));
+                    int vTL = idxVc + dvTL;
+                    int vTR = idxVc + dvTR;
+                    int vBL = idxVx + dvBL;
+                    int vBR = idxVx + dvBR;
+                    if(u + du < 0 || u + du >= size || v + dv < 0 || v + dv >= size)
+                    {
+                        vBL = (int)size02 * 6 + addedV;
+                        vBR = vBL + 1;
+                        addedV += 2;
+
+                        Vector3 pos = new HexCoords(u + du, v + dv).toVector3(h[idxHx]) - center;
+                        vertices.Add(pos + hexP[dvBL]);
+                        vertices.Add(pos + hexP[dvBR]);
+                        float q = (v + dv - 1) / 2.0f;
+                        uv.Add(new Vector2(u + du - q, q) + hexT[dvBL]);
+                        uv.Add(new Vector2(u + du - q, q) + hexT[dvBR]);
+                    }
+                    triangles.Add(vBL);
+                    triangles.Add(vTL);
+                    triangles.Add(vTR);
+                    triangles.Add(vTL);
+                    triangles.Add(vBL);
+                    triangles.Add(vBR);
+                }
+            }
+        }
+
+        Mesh genMesh = new Mesh();
+        genMesh.vertices = vertices.ToArray();
+        genMesh.uv = uv.ToArray();
+        genMesh.triangles = triangles.ToArray();
+        genMesh.RecalculateNormals();
+
+        return genMesh;
+    } 
+
+    GameObject GenChunk6(HexCoords absStart, int depth, long size, PrismGenMode genMode)
+    {
+        GameObject result = new GameObject();
+        result.AddComponent<MeshRenderer>();
+        if ((genMode & PrismGenMode.Collider) == PrismGenMode.Collider)
+        {
+            result.AddComponent<MeshCollider>();
+        }
+        result.AddComponent<MeshFilter>();
+        MeshFilter filter = result.GetComponent<MeshFilter>();
+        MeshCollider collider = result.GetComponent<MeshCollider>();
+        MeshRenderer renderer = result.GetComponent<MeshRenderer>();
+        renderer.material = hexMaterial;
+
+        float hMin = float.PositiveInfinity;
+        float hMax = float.NegativeInfinity;
+        
+        long size2 = size + 2;
+        long size22 = size2 * size2;
+
+        float[] h = new float[size22];
+        for (long u = 0; u < size2; u++)
+        {
+            for (long v = 0; v < size2; v++)
+            {
+                HexCoords pos = absStart + (new HexCoords(u - 1, v - 1) << depth);
+                float t = _generator.ValueAt(pos);
+                h[u * size2 + v] = t;
+                if(u == 0 || u == size2 || v == 0 || v == size2)
+                {
+                    continue;
+                }
+                if (t < hMin)
+                {
+                    hMin = t;
+                }
+                if (t > hMax)
+                {
+                    hMax = t;
+                }
+            }
+        }
+
+        Vector3 center = (new HexCoords(size - 1, size - 1).toVector3(hMax + hMin) / 2.0f);
+
+        if (collider != null)
+        {
+            collider.sharedMesh = GenMesh6(h, size, center, genMode | PrismGenMode.AllSides);
+        }
+        filter.mesh = GenMesh6(h, size, center, genMode);
+        int depthScale = 1 << depth;
+        string scaleSuffix = (depthScale == 1) ? "" : (" x" + depthScale.ToString());
+
+        result.transform.parent = _activePrisms.transform;
+        Vector3 tPos = center;
+        tPos.x *= depthScale;
+        tPos.z *= depthScale;
+        result.transform.localPosition = tPos + absStart.toVector3(0);
+        Vector3 tScale = result.transform.localScale;
+        tScale.x *= depthScale;
+        tScale.z *= depthScale;
+        result.transform.localScale = tScale;
+        result.transform.name = "6-Chunk " + absStart.ToString() + scaleSuffix + " s" + size.ToString();
+
+        return result;
+    }
+
     string Gen3(params string[] args)
     {
         long u0 = long.Parse(args[0]);
@@ -270,6 +460,16 @@ public class TerrainMaker : MonoBehaviour {
         int sk = int.Parse(args[2]);
         long sd = long.Parse(args[3]);
         GameObject result = GenChunk3(new HexCoords(u0, v0) << sk, sk, sd);
+        return result.transform.name + " generated.";
+    }
+
+    string Gen6(params string[] args)
+    {
+        long u0 = long.Parse(args[0]);
+        long v0 = long.Parse(args[1]);
+        int sk = int.Parse(args[2]);
+        long sd = long.Parse(args[3]);
+        GameObject result = GenChunk6(new HexCoords(u0, v0) << sk, sk, sd, PrismGenMode.AllSides | PrismGenMode.Collider);
         return result.transform.name + " generated.";
     }
 }

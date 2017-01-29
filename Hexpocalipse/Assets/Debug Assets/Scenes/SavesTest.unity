@@ -342,7 +342,8 @@ MonoBehaviour:
   prefab: {fileID: 168014, guid: 3b34baa5d73064ef49ba209a0f5d36b7, type: 2}
   defaultCamera: {fileID: 367235823}
   controller: {fileID: 1525348418}
-  hexMaterial: {fileID: 2100000, guid: ff66636f7688e9b48a60592b0822b292, type: 2}
+  triMaterial: {fileID: 2100000, guid: ff66636f7688e9b48a60592b0822b292, type: 2}
+  hexMaterial: {fileID: 2100000, guid: 9a610636a585a2f4e9f3933de7c94511, type: 2}
 --- !u!4 &798594132
 Transform:
   m_ObjectHideFlags: 0
