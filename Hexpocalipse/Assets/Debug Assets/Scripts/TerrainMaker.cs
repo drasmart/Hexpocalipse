@@ -39,6 +39,7 @@ public class TerrainMaker : MonoBehaviour {
             repo.RegisterCommand("defGen", DefGen);
             repo.RegisterCommand("gen3", Gen3);
             repo.RegisterCommand("gen6", Gen6);
+            repo.RegisterCommand("fill6", Fill6);
             ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
 			                         "Try: 'defGen' -> 'swap' -> 'tp 0 300 0'");
         }
@@ -156,7 +157,8 @@ public class TerrainMaker : MonoBehaviour {
                 "5. tp <x> <y> <z>" +
                 "6. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
                 "7. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>" +
-                "8. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>");
+                "8. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>" +
+                "9. fill6 <relative_u0> <relative_v0> <relative_du> <relative_dv>");
 	}
 
     string DefGen(params string[] args)
@@ -326,9 +328,10 @@ public class TerrainMaker : MonoBehaviour {
         PrismGenMode[] sideTests = { PrismGenMode.PosW, PrismGenMode.PosV, PrismGenMode.NegU, PrismGenMode.NegW, PrismGenMode.NegV, PrismGenMode.PosU };
         HexCoords[] cellTests = { new HexCoords(-1, -1), new HexCoords(0, -1), new HexCoords(1, 0), new HexCoords(1, 1), new HexCoords(0, 1), new HexCoords(-1, 0) };
         int addedV = 0;
+        bool colliderTest = (mode | PrismGenMode.Collider) == PrismGenMode.Collider;
         for (int i = 0; i < 6; i++)
         {
-            if ((mode & sideTests[i]) == 0)
+            if (!colliderTest && ((mode & sideTests[i]) == 0))
             {
                 continue;
             }
@@ -354,7 +357,20 @@ public class TerrainMaker : MonoBehaviour {
                     int vTR = idxVc + dvTR;
                     int vBL = idxVx + dvBL;
                     int vBR = idxVx + dvBR;
-                    if(u + du < 0 || u + du >= size || v + dv < 0 || v + dv >= size)
+                    if (!colliderTest)
+                    {
+                        vTL = (int)size02 * 6 + addedV;
+                        vTR = vTL + 1;
+                        addedV += 2;
+
+                        Vector3 pos = new HexCoords(u, v).toVector3(h[idxHc]) - center;
+                        vertices.Add(pos + hexP[dvTL]);
+                        vertices.Add(pos + hexP[dvTR]);
+                        float q = (v - 1) / 2.0f;
+                        uv.Add(new Vector2(u - q, q) + hexT[dvTL]);
+                        uv.Add(new Vector2(u - q, q) + hexT[dvTR]);
+                    }
+                    if (!colliderTest || u + du < 0 || u + du >= size || v + dv < 0 || v + dv >= size)
                     {
                         vBL = (int)size02 * 6 + addedV;
                         vBR = vBL + 1;
@@ -433,9 +449,9 @@ public class TerrainMaker : MonoBehaviour {
 
         if (collider != null)
         {
-            collider.sharedMesh = GenMesh6(h, size, center, genMode | PrismGenMode.AllSides);
+            collider.sharedMesh = GenMesh6(h, size, center, genMode);
         }
-        filter.mesh = GenMesh6(h, size, center, genMode);
+        filter.mesh = GenMesh6(h, size, center, genMode & ~PrismGenMode.Collider);
         int depthScale = 1 << depth;
         string scaleSuffix = (depthScale == 1) ? "" : (" x" + depthScale.ToString());
 
@@ -471,5 +487,28 @@ public class TerrainMaker : MonoBehaviour {
         long sd = long.Parse(args[3]);
         GameObject result = GenChunk6(new HexCoords(u0, v0) << sk, sk, sd, PrismGenMode.AllSides | PrismGenMode.Collider);
         return result.transform.name + " generated.";
+    }
+
+    string Fill6(params string[] args)
+    {
+        long u0 = long.Parse(args[0]);
+        long v0 = long.Parse(args[1]);
+        long du = long.Parse(args[2]);
+        long dv = long.Parse(args[3]);
+        const int d = 5;
+        HexCoords c0 = new HexCoords(u0, v0) >> d;
+        HexCoords c1 = new HexCoords(u0 + du, v0 + dv) >> d;
+        string[] pms = { "u", "v", "0", (1<<d).ToString() };
+        string result = "";
+        for (long i = c0.u; i < c1.u; i++)
+        {
+            pms[0] = (i<<d).ToString();
+            for(long j = c0.v; j < c1.v; j++)
+            {
+                pms[1] = (j<<d).ToString();
+                result += Gen6(pms) + "\n";
+            }
+        }
+        return result;
     }
 }
