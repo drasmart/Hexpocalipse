@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace World
@@ -14,6 +12,8 @@ namespace World
         public float lambda { get; private set; }
         [SerializeField]
         public float delta0 { get; private set; }
+        [SerializeField]
+        private System.Random randGen = new System.Random();
 
         public HexGridGen(int depth, float delta0, float lambda)
         {
@@ -36,7 +36,7 @@ namespace World
             if(coords.Depth >= depth)
             {
                 //Logger.Log("req = " + coords.ToString() + " -> Random");
-                return UnityEngine.Random.value * delta0;
+                return (float)randGen.NextDouble() * delta0;
             }
             HexCoords[] parents = coords.Parents;
             //if (coords.Depth == depth - 1)
@@ -48,7 +48,7 @@ namespace World
             float v1 = valueStorage.ValueAt(parents[1]);
             //Logger.Log("req = " + coords.ToString() + " : Parents : " + parents[0].ToString() + " ( " + v0.ToString() + " ) , " + parents[1].ToString() + " ( " + v1.ToString() + " ) ");
             float cd = DeltaAt(depth - coords.Depth - 1);
-            float rv = UnityEngine.Random.value - 0.5f;
+            float rv = (float)randGen.NextDouble() - 0.5f;
             float dv = cd * (rv + g / 2.0f);
             float mv = (v0 + v1) / 2.0f;
             float result = mv + dv;

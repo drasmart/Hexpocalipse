@@ -1,15 +1,19 @@
 using UnityEngine;
 using World;
 using System.IO;
+using System.Collections;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
+using CielaSpike;
 
 public class TerrainMaker : MonoBehaviour {
+
+    private delegate void ChunkGeneratedHandler(GameObject chunk);
 
 	private GameObject _activePrisms;
 
     //[SerializeField]
-	private World.HexGridDriver _generator;
+	private HexDataStorage _generator;
 
 	public GameObject prefab;
 	public GameObject defaultCamera;
@@ -39,6 +43,7 @@ public class TerrainMaker : MonoBehaviour {
             repo.RegisterCommand("defGen", DefGen);
             repo.RegisterCommand("gen3", Gen3);
             repo.RegisterCommand("gen6", Gen6);
+            repo.RegisterCommand("fill3", Fill3);
             repo.RegisterCommand("fill6", Fill6);
             ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
 			                         "Try: 'defGen' -> 'swap' -> 'tp 0 300 0'");
@@ -67,7 +72,7 @@ public class TerrainMaker : MonoBehaviour {
         for (long i = 0; i < sd; i++) {
 			for (long j = 0; j < sd; j++) {
                 HexCoords coords = (start + new HexCoords(i, j)) << sk;
-                float height = _generator[coords];
+                float height = _generator.ValueAt(coords);
 				GameObject prism = Instantiate(prefab) as GameObject;
 				prism.transform.parent = _activePrisms.transform;
 				prism.transform.localPosition = new Vector3(((float)i - (float)j / 2) * sq15 * sPos, height, (float)j * 0.75f * sPos);
@@ -116,7 +121,7 @@ public class TerrainMaker : MonoBehaviour {
         float lambda = float.Parse(args[1]);
         int cDepth = int.Parse(args[2]);
         int fDepth = (args.Length > 3) ? int.Parse(args[3]) : cDepth;
-        _generator = new World.HexGridDriver(cDepth, fDepth, delta0, lambda, savePath);
+        _generator = new LockedStorage(new HexGridDriver(cDepth, fDepth, delta0, lambda, savePath));
     }
 
     void SaveGenParams(string[] args)
@@ -139,6 +144,7 @@ public class TerrainMaker : MonoBehaviour {
         fs.Close();
 
         SetGenParams(args);
+        Debug.Log(args);
     }
 
 	string Save(params string[] args) {
@@ -150,15 +156,16 @@ public class TerrainMaker : MonoBehaviour {
 
 	string Help(params string[] args) {
 		return ("Available commands:\n" + 
-		        "1. setGen <delta0> <lambda> <chunkDepth> [ <fractalDepth> ]\n" + 
-		        "2. gen <relative_u0> <relative_v0> <scaleDepth> <size>\n" + 
-		        "3. clr\n" + 
-		        "4. swap\n" +
-                "5. tp <x> <y> <z>" +
-                "6. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
-                "7. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>" +
-                "8. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>" +
-                "9. fill6 <relative_u0> <relative_v0> <relative_du> <relative_dv>");
+		        "01. setGen <delta0> <lambda> <chunkDepth> [ <fractalDepth> ]\n" + 
+		        "02. gen <relative_u0> <relative_v0> <scaleDepth> <size>\n" + 
+		        "03. clr\n" + 
+		        "04. swap\n" +
+                "05. tp <x> <y> <z>" +
+                "06. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
+                "07. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
+                "08. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
+                "09. fill3 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n" +
+                "10. fill6 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n");
 	}
 
     string DefGen(params string[] args)
@@ -180,43 +187,11 @@ public class TerrainMaker : MonoBehaviour {
         return o1 + "\n" + o2;
     }
 
-    GameObject GenChunk3(HexCoords absStart, int depth, long size)
+    Mesh GenMesh3(float[] h, long size, Vector3 center)
     {
-        GameObject result = new GameObject();
-        result.AddComponent<MeshRenderer>();
-        result.AddComponent<MeshCollider>();
-        result.AddComponent<MeshFilter>();
-        MeshFilter filter = result.GetComponent<MeshFilter>();
-        MeshCollider collider = result.GetComponent<MeshCollider>();
-        MeshRenderer renderer = result.GetComponent<MeshRenderer>();
-        renderer.material = triMaterial;
-
-        float hMin = float.PositiveInfinity;
-        float hMax = float.NegativeInfinity;
-
         long size1 = size + 1;
         long size2 = size * size;
         long size12 = size1 * size1;
-        float[] h = new float[size12];
-        for (long u = 0; u < size1; u++)
-        {
-            for (long v = 0; v < size1; v++)
-            {
-                HexCoords pos = absStart + (new HexCoords(u, v) << depth);
-                float t = _generator.ValueAt(pos);
-                h[u * size1 + v] = t;
-                if(t < hMin)
-                {
-                    hMin = t;
-                }
-                if(t > hMax)
-                {
-                    hMax = t;
-                }
-            }
-        }
-        
-        Vector3 center = (new HexCoords(size1, size1).toVector3(hMax + hMin) / 2.0f);
 
         Vector3[] vertices = new Vector3[size12];
         Vector2[] uv = new Vector2[size12];
@@ -229,8 +204,8 @@ public class TerrainMaker : MonoBehaviour {
                 int idx0 = (int)(u * size1 + v);
                 int idx1 = (int)(idx0 + size1);
                 vertices[idx0] = new HexCoords(u, v).toVector3(h[idx0]) - center;
-                uv[idx0] = new Vector2(u, v);
-                if(u >= size || v >= size)
+                uv[idx0] = new HexCoords(u, v).toVector2;
+                if (u >= size || v >= size)
                 {
                     continue;
                 }
@@ -250,6 +225,53 @@ public class TerrainMaker : MonoBehaviour {
         genMesh.triangles = triangles;
         genMesh.RecalculateNormals();
 
+        return genMesh;
+    }
+
+    IEnumerator GenChunk3(HexCoords absStart, int depth, long size, ChunkGeneratedHandler finishHandler)
+    {
+        // Data Part
+
+        float hMin = float.PositiveInfinity;
+        float hMax = float.NegativeInfinity;
+
+        long size1 = size + 1;
+        long size12 = size1 * size1;
+        float[] h = new float[size12];
+        for (long u = 0; u < size1; u++)
+        {
+            for (long v = 0; v < size1; v++)
+            {
+                HexCoords pos = absStart + (new HexCoords(u, v) << depth);
+                float t = _generator.ValueAt(pos);
+                h[u * size1 + v] = t;
+                if(t < hMin)
+                {
+                    hMin = t;
+                }
+                if(t > hMax)
+                {
+                    hMax = t;
+                }
+            }
+        }
+
+        yield return Ninja.JumpToUnity;
+        // Unity Part
+
+        GameObject result = new GameObject();
+        result.AddComponent<MeshRenderer>();
+        result.AddComponent<MeshCollider>();
+        result.AddComponent<MeshFilter>();
+        MeshFilter filter = result.GetComponent<MeshFilter>();
+        MeshCollider collider = result.GetComponent<MeshCollider>();
+        MeshRenderer renderer = result.GetComponent<MeshRenderer>();
+        renderer.material = triMaterial;
+
+        Vector3 center = (new HexCoords(size1, size1).toVector3(hMax + hMin) / 2.0f);
+
+        Mesh genMesh = GenMesh3(h, size, center);
+
         collider.sharedMesh = genMesh;
         filter.mesh = genMesh;
         int depthScale = 1 << depth;
@@ -266,7 +288,9 @@ public class TerrainMaker : MonoBehaviour {
         result.transform.localScale = tScale;
         result.transform.name = "3-Chunk " + absStart.ToString() + scaleSuffix + " s" + size.ToString();
 
-        return result;
+        //return result;
+        finishHandler(result);
+        yield break;
     }
 
     public enum PrismGenMode
@@ -400,21 +424,11 @@ public class TerrainMaker : MonoBehaviour {
         genMesh.RecalculateNormals();
 
         return genMesh;
-    } 
+    }
 
-    GameObject GenChunk6(HexCoords absStart, int depth, long size, PrismGenMode genMode)
+    IEnumerator GenChunk6(HexCoords absStart, int depth, long size, PrismGenMode genMode, ChunkGeneratedHandler finishHandler)
     {
-        GameObject result = new GameObject();
-        result.AddComponent<MeshRenderer>();
-        if ((genMode & PrismGenMode.Collider) == PrismGenMode.Collider)
-        {
-            result.AddComponent<MeshCollider>();
-        }
-        result.AddComponent<MeshFilter>();
-        MeshFilter filter = result.GetComponent<MeshFilter>();
-        MeshCollider collider = result.GetComponent<MeshCollider>();
-        MeshRenderer renderer = result.GetComponent<MeshRenderer>();
-        renderer.material = hexMaterial;
+        // Unity Part
 
         float hMin = float.PositiveInfinity;
         float hMax = float.NegativeInfinity;
@@ -445,6 +459,21 @@ public class TerrainMaker : MonoBehaviour {
             }
         }
 
+        yield return Ninja.JumpToUnity;
+        // Data Part
+
+        GameObject result = new GameObject();
+        result.AddComponent<MeshRenderer>();
+        if ((genMode & PrismGenMode.Collider) == PrismGenMode.Collider)
+        {
+            result.AddComponent<MeshCollider>();
+        }
+        result.AddComponent<MeshFilter>();
+        MeshFilter filter = result.GetComponent<MeshFilter>();
+        MeshCollider collider = result.GetComponent<MeshCollider>();
+        MeshRenderer renderer = result.GetComponent<MeshRenderer>();
+        renderer.material = hexMaterial;
+
         Vector3 center = (new HexCoords(size - 1, size - 1).toVector3(hMax + hMin) / 2.0f);
 
         if (collider != null)
@@ -466,7 +495,9 @@ public class TerrainMaker : MonoBehaviour {
         result.transform.localScale = tScale;
         result.transform.name = "6-Chunk " + absStart.ToString() + scaleSuffix + " s" + size.ToString();
 
-        return result;
+        //return result;
+        finishHandler(result);
+        yield break;
     }
 
     string Gen3(params string[] args)
@@ -475,8 +506,8 @@ public class TerrainMaker : MonoBehaviour {
         long v0 = long.Parse(args[1]);
         int sk = int.Parse(args[2]);
         long sd = long.Parse(args[3]);
-        GameObject result = GenChunk3(new HexCoords(u0, v0) << sk, sk, sd);
-        return result.transform.name + " generated.";
+        this.StartCoroutineAsync(GenChunk3(new HexCoords(u0, v0) << sk, sk, sd, OnChunkGenerated));
+        return "Generation started...";
     }
 
     string Gen6(params string[] args)
@@ -485,8 +516,31 @@ public class TerrainMaker : MonoBehaviour {
         long v0 = long.Parse(args[1]);
         int sk = int.Parse(args[2]);
         long sd = long.Parse(args[3]);
-        GameObject result = GenChunk6(new HexCoords(u0, v0) << sk, sk, sd, PrismGenMode.AllSides | PrismGenMode.Collider);
-        return result.transform.name + " generated.";
+        this.StartCoroutineAsync(GenChunk6(new HexCoords(u0, v0) << sk, sk, sd, PrismGenMode.AllSides | PrismGenMode.Collider, OnChunkGenerated));
+        return "Generation started...";
+    }
+
+    string Fill3(params string[] args)
+    {
+        long u0 = long.Parse(args[0]);
+        long v0 = long.Parse(args[1]);
+        long du = long.Parse(args[2]);
+        long dv = long.Parse(args[3]);
+        const int d = 7;
+        HexCoords c0 = new HexCoords(u0, v0) >> d;
+        HexCoords c1 = new HexCoords(u0 + du, v0 + dv) >> d;
+        string[] pms = { "u", "v", "0", (1 << d).ToString() };
+        string result = "";
+        for (long i = c0.u; i <= c1.u; i++)
+        {
+            pms[0] = (i << d).ToString();
+            for (long j = c0.v; j <= c1.v; j++)
+            {
+                pms[1] = (j << d).ToString();
+                result += Gen3(pms) + "\n";
+            }
+        }
+        return "Generation started...";
     }
 
     string Fill6(params string[] args)
@@ -500,15 +554,20 @@ public class TerrainMaker : MonoBehaviour {
         HexCoords c1 = new HexCoords(u0 + du, v0 + dv) >> d;
         string[] pms = { "u", "v", "0", (1<<d).ToString() };
         string result = "";
-        for (long i = c0.u; i < c1.u; i++)
+        for (long i = c0.u; i <= c1.u; i++)
         {
             pms[0] = (i<<d).ToString();
-            for(long j = c0.v; j < c1.v; j++)
+            for(long j = c0.v; j <= c1.v; j++)
             {
                 pms[1] = (j<<d).ToString();
                 result += Gen6(pms) + "\n";
             }
         }
-        return result;
+        return "Generation started...";
+    }
+
+    void OnChunkGenerated(GameObject chunk)
+    {
+        ConsoleLog.Instance.Log(chunk.transform.name + " generated.");
     }
 }
