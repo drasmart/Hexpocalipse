@@ -5,6 +5,7 @@ using System.Collections;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using CielaSpike;
+using DeveloperConsole;
 
 public class TerrainMaker : MonoBehaviour {
 
@@ -33,20 +34,19 @@ public class TerrainMaker : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		if (ConsoleContainer.instance != null) {
-			ConsoleCommandsRepository repo = ConsoleCommandsRepository.Instance;
-			repo.RegisterCommand("gen", GenPrisms);
-			repo.RegisterCommand("setGen", SetGen);
-			repo.RegisterCommand("clr", RemovePrisms);
-			repo.RegisterCommand("swap", Swap);
-			repo.RegisterCommand("tp", Teleport);
-			repo.RegisterCommand("help", Help);
-            repo.RegisterCommand("defGen", DefGen);
-            repo.RegisterCommand("gen3", Gen3);
-            repo.RegisterCommand("gen6", Gen6);
-            repo.RegisterCommand("fill3", Fill3);
-            repo.RegisterCommand("fill6", Fill6);
-            ConsoleLog.Instance.Log ("You can use 'help'.\n" + 
-			                         "Try: 'defGen' -> 'swap' -> 'tp 0 300 0'");
+			Console.AddCommand("gen", GenPrisms);
+			Console.AddCommand("setGen", SetGen);
+			Console.AddCommand("clr", RemovePrisms);
+			Console.AddCommand("swap", Swap);
+			Console.AddCommand("tp", Teleport);
+			Console.AddCommand("help2", Help);
+            Console.AddCommand("defGen", DefGen);
+            Console.AddCommand("gen3", Gen3);
+            Console.AddCommand("gen6", Gen6);
+            Console.AddCommand("fill3", Fill3);
+            Console.AddCommand("fill6", Fill6);
+            Console.Print("You can use 'help'.\n" +
+                          "Try: 'defGen' -> 'swap' -> 'tp 0 300 0'");
         }
         if(!Directory.Exists(savePath))
         {
@@ -57,7 +57,7 @@ public class TerrainMaker : MonoBehaviour {
         //Gen6("0", "0", "0", "8");
     }
 
-	string GenPrisms(params string[] args) {
+	void GenPrisms(params string[] args) {
 		long u0 = long.Parse (args [0]);
 		long v0 = long.Parse (args [1]);
 		int  sk = int .Parse (args [2]);
@@ -81,38 +81,38 @@ public class TerrainMaker : MonoBehaviour {
             }
 		}
         World.Logger.Flush();
-		return "Generation Finished.";
+		Console.Print("Generation Finished.");
 	}
 
-	string RemovePrisms(params string[] args) {
+	void RemovePrisms(params string[] args) {
 		if(_activePrisms != null) {
 			GameObject.Destroy(_activePrisms);
 		}
 		_activePrisms = new GameObject ();
 		_activePrisms.transform.parent = transform;
 		_activePrisms.transform.localScale = Vector3.one;
-		return "Prisms removed.";
+        Console.Print("Prisms removed.");
 	}
 
-	string Teleport(params string[] args) {
+	void Teleport(params string[] args) {
 		float x = float.Parse (args [0]);
 		float y = float.Parse (args [1]);
 		float z = float.Parse (args [2]);
 		controller.transform.position = new Vector3 (x, y, z);
-		return "Teleported";
+        Console.Print("Teleported");
 	}
 
-	string Swap(params string[] args) {
+	void Swap(params string[] args) {
 		defaultCamera.SetActive (!defaultCamera.activeSelf);
 		controller.SetActive (!controller.activeSelf);
-		return "Swapped";
+		Console.Print("Swapped");
 	}
 
-    string SetGen(params string[] args)
+    void SetGen(params string[] args)
     {
         SetGenParams(args);
         SaveGenParams(args);
-        return "Generation parameters changed.";
+        Console.Print("Generation parameters changed.");
     }
 
     void SetGenParams(string[] args)
@@ -147,28 +147,28 @@ public class TerrainMaker : MonoBehaviour {
         Debug.Log(args);
     }
 
-	string Save(params string[] args) {
+	void Save(params string[] args) {
 		string name = args [0];
 		string path = Application.persistentDataPath;
 		string fullName = path + name;
-		return "Saving to '" + fullName + "'...";
+		Console.Print("Saving to '" + fullName + "'...");
 	}
 
-	string Help(params string[] args) {
-		return ("Available commands:\n" + 
-		        "01. setGen <delta0> <lambda> <chunkDepth> [ <fractalDepth> ]\n" + 
-		        "02. gen <relative_u0> <relative_v0> <scaleDepth> <size>\n" + 
-		        "03. clr\n" + 
-		        "04. swap\n" +
-                "05. tp <x> <y> <z>" +
-                "06. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
-                "07. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
-                "08. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
-                "09. fill3 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n" +
-                "10. fill6 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n");
+	void Help(params string[] args) {
+        Console.Print("Available commands:\n" + 
+                      "01. setGen <delta0> <lambda> <chunkDepth> [ <fractalDepth> ]\n" + 
+                      "02. gen <relative_u0> <relative_v0> <scaleDepth> <size>\n" + 
+                      "03. clr\n" + 
+                      "04. swap\n" +
+                      "05. tp <x> <y> <z>" +
+                      "06. defGen [ <lambda> <chunkDepth> [ <fractalDepth> ] ]\n" +
+                      "07. gen3 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
+                      "08. gen6 <relative_u0> <relative_v0> <scaleDepth> <size>\n" +
+                      "09. fill3 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n" +
+                      "10. fill6 <relative_u0> <relative_v0> <relative_du> <relative_dv>\n");
 	}
 
-    string DefGen(params string[] args)
+    void DefGen(params string[] args)
     {
         float lambda = 0.5f;
         int   cDepth = 4;
@@ -180,11 +180,10 @@ public class TerrainMaker : MonoBehaviour {
             fDepth = (args.Length > 3) ? int.Parse(args[3]) : cDepth;
         }
         string[] s1 = { (0.39f * (1 << fDepth)).ToString(), lambda.ToString(), cDepth.ToString(), fDepth.ToString() };
-        string o1 = SetGen(s1);
+        SetGen(s1);
         string sz = Mathf.Min(128, 4 << cDepth).ToString();
         string[] s2 = { "0", "0", "0", sz };
-        string o2 = GenPrisms(s2);
-        return o1 + "\n" + o2;
+        GenPrisms(s2);
     }
 
     Mesh GenMesh3(float[] h, long size, Vector3 center)
@@ -500,27 +499,27 @@ public class TerrainMaker : MonoBehaviour {
         yield break;
     }
 
-    string Gen3(params string[] args)
+    void Gen3(params string[] args)
     {
         long u0 = long.Parse(args[0]);
         long v0 = long.Parse(args[1]);
         int sk = int.Parse(args[2]);
         long sd = long.Parse(args[3]);
         this.StartCoroutineAsync(GenChunk3(new HexCoords(u0, v0) << sk, sk, sd, OnChunkGenerated));
-        return "Generation started...";
+        Console.Print("Generation started...");
     }
 
-    string Gen6(params string[] args)
+    void Gen6(params string[] args)
     {
         long u0 = long.Parse(args[0]);
         long v0 = long.Parse(args[1]);
         int sk = int.Parse(args[2]);
         long sd = long.Parse(args[3]);
         this.StartCoroutineAsync(GenChunk6(new HexCoords(u0, v0) << sk, sk, sd, PrismGenMode.AllSides | PrismGenMode.Collider, OnChunkGenerated));
-        return "Generation started...";
+        Console.Print("Generation started...");
     }
 
-    string Fill3(params string[] args)
+    void Fill3(params string[] args)
     {
         long u0 = long.Parse(args[0]);
         long v0 = long.Parse(args[1]);
@@ -530,20 +529,19 @@ public class TerrainMaker : MonoBehaviour {
         HexCoords c0 = new HexCoords(u0, v0) >> d;
         HexCoords c1 = new HexCoords(u0 + du, v0 + dv) >> d;
         string[] pms = { "u", "v", "0", (1 << d).ToString() };
-        string result = "";
         for (long i = c0.u; i <= c1.u; i++)
         {
             pms[0] = (i << d).ToString();
             for (long j = c0.v; j <= c1.v; j++)
             {
                 pms[1] = (j << d).ToString();
-                result += Gen3(pms) + "\n";
+                Gen3(pms);
             }
         }
-        return "Generation started...";
+        Console.Print("Generation started...");
     }
 
-    string Fill6(params string[] args)
+    void Fill6(params string[] args)
     {
         long u0 = long.Parse(args[0]);
         long v0 = long.Parse(args[1]);
@@ -553,21 +551,20 @@ public class TerrainMaker : MonoBehaviour {
         HexCoords c0 = new HexCoords(u0, v0) >> d;
         HexCoords c1 = new HexCoords(u0 + du, v0 + dv) >> d;
         string[] pms = { "u", "v", "0", (1<<d).ToString() };
-        string result = "";
         for (long i = c0.u; i <= c1.u; i++)
         {
             pms[0] = (i<<d).ToString();
             for(long j = c0.v; j <= c1.v; j++)
             {
                 pms[1] = (j<<d).ToString();
-                result += Gen6(pms) + "\n";
+                Gen6(pms);
             }
         }
-        return "Generation started...";
+        Console.Print("Generation started...");
     }
 
     void OnChunkGenerated(GameObject chunk)
     {
-        ConsoleLog.Instance.Log(chunk.transform.name + " generated.");
+        Console.Print(chunk.transform.name + " generated.");
     }
 }

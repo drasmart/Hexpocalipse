@@ -28,7 +28,7 @@ namespace World
 
         public float Evaluate(HexCoords coords, HexDataStorage valueStorage, HexDataStorage alphaStorage)
         {
-            return ((float)randGen.NextDouble() - 0.5f) * 2 * Mathf.PI;
+            return ((float)randGen.NextDouble() - 0.5f) * 2 * UnityEngine.Mathf.PI;
         }
     }
 
